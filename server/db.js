@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
 const dns = require('dns');
 
-// Use Google public DNS to resolve MongoDB Atlas SRV records
-dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+// Use Google public DNS to resolve MongoDB Atlas SRV records (local dev only)
+if (process.env.NODE_ENV !== 'production') {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+}
 
 let isConnected = false;
 
