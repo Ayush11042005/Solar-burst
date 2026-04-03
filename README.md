@@ -21,23 +21,23 @@ The application operates completely **Serverless** on Netlify, using in-memory e
 
 ### 1. In-Depth Categorical Analysis
 The analytical engine autonomously classifies burst peaks into standardized astronomical scales (Quiet, A, B, C, M, X, and Extreme X saturation risk).
-![Categorical Analysis](public/screenshots/analysis_categorical.png)
+![Categorical Analysis](public/Screenshot%202026-04-04%20013549.png)
 
 ### 2. Time-Series Visualization
 Rich, interactive line graphs rendering exact solar progression over time, mapping out burst intensity `flux_watts_per_m2` and noise-reduced smoothing parameters.
-![Time Series Analysis](public/screenshots/analysis_timeseries.png)
+![Time Series Analysis](public/Screenshot%202026-04-04%20013627.png)
 
 ### 3. Correlation & Statistical Mapping
 A customized correlation matrix automatically maps `background_level` variations against recorded smoothing, assisting in identifying data anomalies.
-![Correlation Matrix](public/screenshots/analysis_correlation.png)
+![Correlation Matrix](public/Screenshot%202026-04-04%20013540.png)
 
 ### 4. Mathematical Distributions
 Histogram modeling accurately bins background levels and raw flux signals, providing researchers with instant probability distribution overviews.
-![Data Distributions](public/screenshots/analysis_distributions.png)
+![Data Distributions](public/Screenshot%202026-04-04%20013531.png)
 
 ### 5. Persistent History & Logging
 A comprehensive audit trail records every data ingestion event and subsequent mathematical analysis, preserving historical timestamps inside MongoDB Atlas.
-![History Log](public/screenshots/history_log.png)
+![History Log](public/Screenshot%202026-04-04%20013639.png)
 
 ---
 
