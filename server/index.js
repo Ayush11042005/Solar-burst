@@ -79,14 +79,18 @@ app.use((err, req, res, next) => {
 });
 
 // ─── Start Server ────────────────────────────────────────────────
-async function start() {
-  await connectDB();
-  app.listen(PORT, () => {
-    console.log(`🚀 SolarBurst API server running on port ${PORT} (${isProd ? 'production' : 'development'})`);
+if (require.main === module) {
+  async function start() {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`🚀 SolarBurst API server running on port ${PORT} (${isProd ? 'production' : 'development'})`);
+    });
+  }
+
+  start().catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
   });
 }
 
-start().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+module.exports = app;

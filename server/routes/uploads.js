@@ -8,18 +8,10 @@ const { v4: uuidv4 } = require('uuid');
 const Upload = require('../models/Upload');
 const HistoryEntry = require('../models/HistoryEntry');
 
-// Configure multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '..', 'uploads');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
-  },
-});
+const { Readable } = require('stream');
+
+// Configure multer for serverless (memory storage)
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowed = ['.csv', '.xls', '.xlsx', '.txt'];
@@ -37,11 +29,11 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-// Parse CSV file into array of row objects
-function parseCSVFile(filePath) {
+// Parse CSV file from buffer
+function parseCSVBuffer(buffer) {
   return new Promise((resolve, reject) => {
     const rows = [];
-    fs.createReadStream(filePath)
+    Readable.from(buffer)
       .pipe(csv())
       .on('data', (row) => rows.push(row))
       .on('end', () => resolve(rows))
@@ -49,10 +41,10 @@ function parseCSVFile(filePath) {
   });
 }
 
-// Parse Excel file
-function parseExcelFile(filePath) {
+// Parse Excel file from buffer
+function parseExcelBuffer(buffer) {
   const XLSX = require('xlsx');
-  const workbook = XLSX.readFile(filePath);
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
   return XLSX.utils.sheet_to_json(sheet);
@@ -71,9 +63,9 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     try {
       if (ext === '.csv' || ext === '.txt') {
-        parsedData = await parseCSVFile(req.file.path);
+        parsedData = await parseCSVBuffer(req.file.buffer);
       } else if (ext === '.xls' || ext === '.xlsx') {
-        parsedData = parseExcelFile(req.file.path);
+        parsedData = parseExcelBuffer(req.file.buffer);
       }
     } catch (parseErr) {
       return res.status(400).json({ error: 'Failed to parse file: ' + parseErr.message });
@@ -83,13 +75,15 @@ router.post('/', upload.single('file'), async (req, res) => {
       columnNames = Object.keys(parsedData[0]);
     }
 
+    const generatedFilename = `${uuidv4()}${ext}`;
+
     const uploadDoc = await Upload.create({
-      filename: req.file.filename,
+      filename: generatedFilename,
       originalName: req.file.originalname,
       rowCount: parsedData.length,
       columnNames,
       status: 'parsed',
-      filePath: req.file.path,
+      filePath: 'serverless-memory',
       fileSize: req.file.size,
       parsedData,
     });
