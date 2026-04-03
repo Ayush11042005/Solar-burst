@@ -1,59 +1,49 @@
 const mongoose = require('mongoose');
 const dns = require('dns');
 
-// Use Google public DNS to resolve MongoDB Atlas SRV records (local dev only)
+// Use Google public DNS for local dev
 if (process.env.NODE_ENV !== 'production') {
   dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 }
 
-let isConnected = false;
+// Global cached connection for Serverless
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    console.error('MONGODB_URI is not defined in .env');
-    process.exit(1);
+  if (!uri) throw new Error('MONGODB_URI is not defined in .env');
+
+  if (cached.conn) {
+    return cached.conn;
   }
 
-  console.log('🔄 Connecting to MongoDB Atlas...');
+  if (!cached.promise) {
+    console.log('🔄 Creating new MongoDB connection...');
+    const opts = {
+      bufferCommands: false, // Fail fast in serverless if not connected
+      serverSelectionTimeoutMS: 5000,
+      family: 4
+    };
+
+    cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
+      console.log('✅ Connected to MongoDB Atlas');
+      return mongoose;
+    });
+  }
 
   try {
-    await mongoose.connect(uri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 15000,
-      socketTimeoutMS: 45000,
-      family: 4,
-    });
-    isConnected = true;
-    console.log('✅ Connected to MongoDB Atlas');
-  } catch (err) {
-    console.error('❌ MongoDB connection error:', err.message);
-    console.log('⚠️  Server will start anyway. MongoDB will retry automatically.');
-    console.log('💡 Tip: Make sure your IP is whitelisted in MongoDB Atlas → Network Access.');
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    console.error('❌ MongoDB connection error:', e.message);
+    throw e;
   }
 
-  mongoose.connection.on('error', (err) => {
-    console.error('MongoDB runtime error:', err.message);
-    isConnected = false;
-  });
-
-  mongoose.connection.on('disconnected', () => {
-    console.warn('⚠️  MongoDB disconnected. Attempting reconnection...');
-    isConnected = false;
-  });
-
-  mongoose.connection.on('reconnected', () => {
-    console.log('✅ MongoDB reconnected');
-    isConnected = true;
-  });
-
-  mongoose.connection.on('connected', () => {
-    console.log('✅ MongoDB connected');
-    isConnected = true;
-  });
+  return cached.conn;
 };
 
-const getConnectionStatus = () => isConnected;
-
 module.exports = connectDB;
-module.exports.getConnectionStatus = getConnectionStatus;
