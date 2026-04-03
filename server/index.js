@@ -41,9 +41,6 @@ if (isProd) {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ─── Serve uploaded files ────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 // ─── API Routes ──────────────────────────────────────────────────
 app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/analysis', require('./routes/analysis'));
@@ -56,18 +53,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', env: isProd ? 'production' : 'development', timestamp: new Date().toISOString() });
 });
 
-// ─── Serve React frontend in production ──────────────────────────
-if (isProd) {
-  const distPath = path.join(__dirname, '..', 'dist');
-  app.use(express.static(distPath));
-
-  // SPA fallback — serve index.html for all non-API routes
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(distPath, 'index.html'));
-    }
-  });
-}
+// ─── Native 404 handler for API routes ─────────────────────────
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'API route not found' });
+});
 
 // ─── Global Error Handler ────────────────────────────────────────
 app.use((err, req, res, next) => {
